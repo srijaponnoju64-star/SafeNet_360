@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Staff Dashboard | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="#" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <span style="color:var(--text-secondary);font-size:0.88rem;">👮 {{ staff.full_name }}</span>
+    <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#fca5a5;">Logout</a>
+  </div>
+</nav>
+
+<div class="page-container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if staff.status == 'pending' %}
+  <!-- Pending Approval -->
+  <div style="display:flex;align-items:center;justify-content:center;min-height:70vh;">
+    <div class="pending-banner" style="max-width:500px;">
+      <div class="icon">⏳</div>
+      <h2 style="font-size:1.4rem;margin-bottom:0.5rem;">Awaiting Admin Approval</h2>
+      <p style="color:var(--text-secondary);line-height:1.7;">
+        Your registration is under review. The admin will verify your credentials and
+        approve your account. Please check back later.
+      </p>
+      <div style="margin-top:1.5rem;padding:1rem;background:rgba(255,255,255,0.04);border-radius:10px;font-size:0.82rem;color:var(--text-secondary);">
+        <strong>Name:</strong> {{ staff.full_name }}<br>
+        <strong>Email:</strong> {{ staff.email }}<br>
+        <strong>Status:</strong> <span style="color:var(--warning);">Pending Approval</span>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-top:1rem;">← Back to Login</a>
+    </div>
+  </div>
+
+  {% elif staff.status == 'rejected' %}
+  <!-- Rejected -->
+  <div style="display:flex;align-items:center;justify-content:center;min-height:70vh;">
+    <div class="pending-banner" style="max-width:500px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+      <div class="icon">❌</div>
+      <h2 style="font-size:1.4rem;margin-bottom:0.5rem;color:#fca5a5;">Registration Rejected</h2>
+      <p style="color:var(--text-secondary);">Your application was not approved. Contact the administrator for more information.</p>
+      <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-top:1rem;">← Back to Login</a>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Approved Staff Dashboard -->
+  <div class="page-header">
+    <h1>Staff Dashboard 👮</h1>
+    <p>Manage your assigned cases and update complaint statuses.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="dashboard-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:2rem;">
+    <div class="stat-card">
+      <div class="stat-icon">📋</div>
+      <div>
+        <div class="stat-value">{{ complaints|length }}</div>
+        <div class="stat-label">Assigned Cases</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div>
+        <div class="stat-value">{{ complaints|selectattr('status','equalto','Completed')|list|length }}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔄</div>
+      <div>
+        <div class="stat-value">{{ complaints|selectattr('status','equalto','In Progress')|list|length }}</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complaint Cards -->
+  {% if complaints %}
+    <div class="section-title">📋 Assigned Complaints</div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      {% for c in complaints %}
+      <div class="card" style="border-left:4px solid {{ '#ef4444' if c.priority=='HIGH' else '#f59e0b' if c.priority=='MEDIUM' else '#10b981' }};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;">
+          <div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+              <code style="color:var(--primary);">{{ c.track_id }}</code>
+              {% if c.is_sos %}<span class="badge badge-sos">SOS</span>{% endif %}
+              <span class="badge badge-{{ c.priority|lower }}">{{ c.priority }}</span>
+            </div>
+            <div style="font-size:0.9rem;font-weight:600;">{{ c.type or 'General' }}</div>
+            <div style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.25rem;">
+              👤 {{ c.user_name }} · 📞 {{ c.user_phone }} · 📅 {{ c.created_at[:10] }}
+            </div>
+          </div>
+          <div>
+            {% if c.status == 'Assigned' %}<span class="badge badge-assigned">Assigned</span>
+            {% elif c.status == 'Accepted' %}<span class="badge" style="background:rgba(168,85,247,0.2);color:#d8b4fe;">Accepted</span>
+            {% elif c.status == 'In Progress' %}<span class="badge badge-progress">In Progress</span>
+            {% elif c.status == 'Completed' %}<span class="badge badge-completed">Completed</span>
+            {% else %}<span class="badge">{{ c.status }}</span>{% endif %}
+          </div>
+        </div>
+
+        {% if c.description %}
+        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(255,255,255,0.04);border-radius:8px;font-size:0.85rem;color:var(--text-secondary);">
+          {{ c.description }}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;align-items:center;">
+          {% if c.latitude %}
+          <span style="font-size:0.8rem;color:var(--accent);">📍 {{ c.latitude }}, {{ c.longitude }}</span>
+          {% endif %}
+          {% if c.media_path %}
+          <a href="{{ url_for('uploaded_file', filename=c.media_path) }}" target="_blank"
+             class="btn btn-sm btn-secondary">📎 View Media</a>
+          {% endif %}
+        </div>
+
+        <!-- Update Status Form -->
+        {% if c.status != 'Completed' %}
+        <form method="POST" action="{{ url_for('update_complaint_status') }}" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <input type="hidden" name="complaint_id" value="{{ c.id }}">
+          <select name="status" class="form-control" style="width:auto;flex:1;">
+            <option value="Accepted">Accepted</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text-secondary);">
+      <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
+      <p>No complaints assigned to you yet. The admin will assign cases shortly.</p>
+    </div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

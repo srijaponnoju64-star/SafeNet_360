@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>women safety</title>
+  <meta name="description"
+    content="A smart platform designed to ensure women's safety by enabling real-time alerts, complaint tracking, and fast response from authorities.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">🛡️ SafeGuard</div>
+    <div class="navbar-links">
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('register_select') }}" class="btn btn-primary btn-sm">Register</a>
+      <a href="{{ url_for('admin_login') }}" class="btn btn-secondary btn-sm">🔐 Admin</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>SafeNet 360° <br> Women's Safety Platform</h1>
+    <p>A smart platform designed to ensure women's safety by enabling real-time alerts,
+      complaint tracking, and fast response from authorities.</p>
+    <div class="hero-buttons">
+      <a href="{{ url_for('register_select') }}" class="btn btn-primary btn-lg">📝 Register Now</a>
+      <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">🔑 Login</a>
+    </div>
+
+    <!-- Feature Cards -->
+    <div class="hero-features">
+      <div class="feature-card">
+        <div class="icon">🚨</div>
+        <h3>SOS Alert</h3>
+        <p>One-tap emergency alert to authorities</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📍</div>
+        <h3>Live Location</h3>
+        <p>Share your real-time location instantly</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📝</div>
+        <h3>Report Incident</h3>
+        <p>File complaints with voice input support</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔍</div>
+        <h3>Track Complaint</h3>
+        <p>Monitor status of filed reports</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🧠</div>
+        <h3>AI Priority</h3>
+        <p>Smart auto-prioritization of cases</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">👮</div>
+        <h3>Staff Response</h3>
+        <p>Trained staff assigned to every case</p>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast-container"></div>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

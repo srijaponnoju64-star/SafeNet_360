@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin Dashboard | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+</head>
+<body>
+<nav class="navbar">
+  <a href="#" class="navbar-brand">🛡️ SafeGuard — Admin</a>
+  <div class="navbar-links">
+    <span style="color:var(--text-secondary);font-size:0.88rem;">🔐 {{ session.admin_name }}</span>
+    <button class="tab-btn active" data-tab="tab-complaints" onclick="showTab('tab-complaints',this)">Complaints</button>
+    <button class="tab-btn" data-tab="tab-staff" onclick="showTab('tab-staff',this)">Staff</button>
+    <button class="tab-btn" data-tab="tab-users" onclick="showTab('tab-users',this)">Users</button>
+    <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#fca5a5;">Logout</a>
+  </div>
+</nav>
+
+<div class="page-container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Stats Row -->
+  <div class="dashboard-grid" style="margin-bottom:2rem;">
+    <div class="stat-card">
+      <div class="stat-icon">📋</div>
+      <div><div class="stat-value">{{ stats.total_complaints }}</div><div class="stat-label">Total Complaints</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div><div class="stat-value" style="color:var(--warning);">{{ stats.pending_complaints }}</div><div class="stat-label">Pending</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div><div class="stat-value">{{ stats.total_users }}</div><div class="stat-label">Registered Users</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">👮</div>
+      <div><div class="stat-value" style="color:var(--warning);">{{ stats.pending_staff }}</div><div class="stat-label">Staff Pending</div></div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tabs" style="margin-bottom:1.5rem;">
+    <button class="tab-btn active" onclick="showTab('tab-complaints',this)">📋 All Complaints</button>
+    <button class="tab-btn" onclick="showTab('tab-staff',this)">👮 Staff Management</button>
+    <button class="tab-btn" onclick="showTab('tab-users',this)">👥 Users</button>
+    <button class="tab-btn" onclick="showTab('tab-analytics',this)">📈 Analytics & Heatmap</button>
+  </div>
+
+  <!-- ── Complaints Tab ─────────────────────────────────────────────── -->
+  <div id="tab-complaints" class="tab-content active" style="display: block;">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Track ID</th>
+            <th>User</th>
+            <th>Type</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in complaints %}
+          <tr>
+            <td>
+              <a href="javascript:void(0)" onclick="openModal({{ c.id }})" style="color:var(--primary);font-size:0.8rem;text-decoration:underline;font-weight:bold;font-family:monospace;">{{ c.track_id }}</a>
+              {% if c.is_sos %}<span class="badge badge-sos" style="margin-left:4px;">SOS</span>{% endif %}
+              {% if c.is_suspicious %}<span class="badge badge-suspicious" style="margin-left:4px;">⚠️</span>{% endif %}
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:0.85rem;">{{ c.user_name }}</div>
+              <div style="color:var(--text-secondary);font-size:0.75rem;">{{ c.user_email }}</div>
+              <div style="color:var(--text-secondary);font-size:0.75rem;">📞 {{ c.user_phone }}</div>
+            </td>
+            <td style="font-size:0.85rem;">{{ c.type or '—' }}</td>
+            <td><span class="badge badge-{{ c.priority|lower }}">{{ c.priority }}</span></td>
+            <td>
+              {% if c.status == 'Pending' %}<span class="badge badge-pending">Pending</span>
+              {% elif c.status == 'Assigned' %}<span class="badge badge-assigned">Assigned</span>
+              {% elif c.status in ['Accepted','In Progress'] %}<span class="badge badge-progress">{{ c.status }}</span>
+              {% elif c.status == 'Completed' %}<span class="badge badge-completed">Completed</span>
+              {% else %}<span class="badge">{{ c.status }}</span>{% endif %}
+            </td>
+            <td style="font-size:0.82rem;">{{ c.staff_name or '—' }}</td>
+            <td style="font-size:0.78rem;color:var(--text-secondary);">{{ c.created_at[:10] }}</td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                <!-- Assign Staff -->
+                <form method="POST" action="{{ url_for('assign_staff') }}" style="display:flex;gap:0.3rem;" onsubmit="return validateAssign(this)">
+                  <input type="hidden" name="complaint_id" value="{{ c.id }}">
+                  {% if approved_staff %}
+                  <select name="staff_id" class="form-control" style="width:auto;font-size:0.78rem;padding:0.3rem 0.5rem;">
+                    <option value="">-- Select Staff --</option>
+                    {% for s in approved_staff %}
+                    <option value="{{ s.id }}" {{ 'selected' if c.assigned_staff_id == s.id }}>{{ s.full_name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-primary" title="Assign selected staff">✓</button>
+                  {% else %}
+                  <span style="font-size:0.75rem;color:var(--warning);padding:0.3rem 0;">No approved staff yet</span>
+                  {% endif %}
+                </form>
+                <!-- Change Status -->
+                <form method="POST" action="{{ url_for('admin_change_status') }}" style="display:flex;gap:0.3rem;">
+                  <input type="hidden" name="complaint_id" value="{{ c.id }}">
+                  <select name="status" class="form-control" style="width:auto;font-size:0.78rem;padding:0.3rem 0.5rem;">
+                    <option {{ 'selected' if c.status=='Pending' }}>Pending</option>
+                    <option {{ 'selected' if c.status=='Assigned' }}>Assigned</option>
+                    <option {{ 'selected' if c.status=='In Progress' }}>In Progress</option>
+                    <option {{ 'selected' if c.status=='Completed' }}>Completed</option>
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-warning">↺</button>
+                </form>
+                <!-- View Media -->
+                {% if c.media_path %}
+                <a href="{{ url_for('uploaded_file', filename=c.media_path) }}" target="_blank" class="btn btn-sm btn-secondary">📎 Media</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);padding:2rem;">No complaints yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Staff Management Tab ───────────────────────────────────────── -->
+  <div id="tab-staff" class="tab-content">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Occupation</th>
+            <th>Aadhar</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in staff_list %}
+          <tr>
+            <td style="font-weight:600;font-size:0.88rem;">{{ s.full_name }}</td>
+            <td style="font-size:0.82rem;color:var(--text-secondary);">{{ s.email }}</td>
+            <td style="font-size:0.82rem;">{{ s.phone }}</td>
+            <td style="font-size:0.82rem;">{{ s.occupation }}</td>
+            <td style="font-size:0.78rem;font-family:monospace;">{{ s.aadhar_number }}</td>
+            <td>
+              {% if s.status == 'pending' %}<span class="badge badge-pending">Pending</span>
+              {% elif s.status == 'approved' %}<span class="badge badge-completed">Approved</span>
+              {% elif s.status == 'rejected' %}<span class="badge" style="background:rgba(239,68,68,0.2);color:#fca5a5;">Rejected</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.78rem;color:var(--text-secondary);">{{ s.created_at[:10] }}</td>
+            <td>
+              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                {% if s.id_proof_path %}
+                <a href="{{ url_for('uploaded_file', filename=s.id_proof_path) }}" target="_blank" class="btn btn-sm btn-secondary">📄 ID</a>
+                {% endif %}
+                {% if s.status == 'pending' %}
+                <form method="POST" action="{{ url_for('approve_staff') }}" style="display:inline;">
+                  <input type="hidden" name="staff_id" value="{{ s.id }}">
+                  <input type="hidden" name="action" value="approve">
+                  <button type="submit" class="btn btn-sm btn-success">✅ Approve</button>
+                </form>
+                <form method="POST" action="{{ url_for('approve_staff') }}" style="display:inline;">
+                  <input type="hidden" name="staff_id" value="{{ s.id }}">
+                  <input type="hidden" name="action" value="reject">
+                  <button type="submit" class="btn btn-sm btn-danger">❌ Reject</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);padding:2rem;">No staff registered yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Users Tab ───────────────────────────────────────── -->
+  <div id="tab-users" class="tab-content">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Occupation</th>
+            <th>Age</th>
+            <th>Gender</th>
+            <th>Registered</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users_list %}
+          <tr>
+            <td style="font-weight:600;font-size:0.88rem;">{{ u.full_name }}</td>
+            <td style="font-size:0.82rem;color:var(--text-secondary);">{{ u.email }}</td>
+            <td style="font-size:0.82rem;">{{ u.phone }}</td>
+            <td style="font-size:0.82rem;">{{ u.occupation }}</td>
+            <td style="font-size:0.82rem;">{{ u.age }}</td>
+            <td style="font-size:0.82rem;">{{ u.gender }}</td>
+            <td style="font-size:0.78rem;color:var(--text-secondary);">{{ u.created_at[:10] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:2rem;">No users registered yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Analytics Tab ─────────────────────────────────────────────── -->
+  <div id="tab-analytics" class="tab-content">
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 1.5rem;">
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; text-align: center;">Complaint Priorities</h3>
+        <canvas id="priorityChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; text-align: center;">Complaint Types</h3>
+        <canvas id="typeChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1.5rem;">
+      <h3 style="margin-bottom: 1rem;">Incident Heatmap</h3>
+      <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:1rem;">Visualizing the latest incident reports to identify high-risk areas.</p>
+      <div id="admin-map" style="height:400px;border-radius:10px;z-index:1; border:1px solid var(--border);"></div>
+    </div>
+  </div>
+
+</div><!-- end page-container -->
+
+<!-- Complaint Detail Modal -->
+<div id="complaintModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.8);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;">
+  <div class="card" style="width:90%;max-width:600px;max-height:90vh;overflow-y:auto;position:relative;border:1px solid rgba(255,255,255,0.1);">
+    <button onclick="closeModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;color:var(--text-secondary);cursor:pointer;">&times;</button>
+    <h2 style="margin-bottom: 1rem;">Complaint Details</h2>
+    <div id="modal-body" style="font-size: 0.9rem; color: var(--text-secondary);">Loading...</div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function showTab(tabId, btn) {
+  // Hide all tabs explicitly
+  document.querySelectorAll('.tab-content').forEach(t => {
+    t.classList.remove('active');
+    t.style.display = 'none';
+  });
+  
+  // Remove active from all buttons
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  
+  // Show target tab explicitly
+  const targetTab = document.getElementById(tabId);
+  if (targetTab) {
+    targetTab.classList.add('active');
+    targetTab.style.display = 'block';
+  }
+  
+  // Make button active
+  if (btn) btn.classList.add('active');
+  
+  // Load analytics if needed
+  if (tabId === 'tab-analytics') {
+    loadAnalytics();
+  }
+}
+
+function validateAssign(form) {
+  const sel = form.querySelector('select[name="staff_id"]');
+  if (!sel || !sel.value) {
+    alert('Please select a staff member from the dropdown first.');
+    return false;
+  }
+  return true;
+}
+
+// Modal Functions
+function openModal(id) {
+  document.getElementById('complaintModal').style.display = 'flex';
+  document.getElementById('modal-body').innerHTML = 'Loading...';
+  fetch('/api/complaint/' + id)
+    .then(r => r.json())
+    .then(c => {
+      let html = `
+        <div style="margin-bottom: 0.5rem;"><strong>Track ID:</strong> <code style="color:var(--primary)">${c.track_id}</code></div>
+        <div style="margin-bottom: 0.5rem;"><strong>Status:</strong> <span class="badge">${c.status}</span></div>
+        <div style="margin-bottom: 0.5rem;"><strong>Priority:</strong> <span class="badge badge-${c.priority.toLowerCase()}">${c.priority}</span></div>
+        <div style="margin-bottom: 0.5rem;"><strong>Type:</strong> ${c.type || 'N/A'}</div>
+        <div style="margin-bottom: 0.5rem;"><strong>Date:</strong> ${c.created_at}</div>
+        <hr style="border-color: var(--border); margin: 1rem 0;">
+        <div style="margin-bottom: 0.5rem;"><strong>User:</strong> ${c.user_name} (${c.user_phone}, ${c.user_email})</div>
+        <div style="margin-bottom: 0.5rem;"><strong>Assigned Staff:</strong> ${c.staff_name || 'Unassigned'} ${c.staff_phone ? '('+c.staff_phone+')' : ''}</div>
+        <hr style="border-color: var(--border); margin: 1rem 0;">
+        <div style="margin-bottom: 0.5rem;"><strong>Description:</strong></div>
+        <div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">${c.description}</div>
+        ${c.incident_details ? `<div style="margin-bottom: 0.5rem;"><strong>Details:</strong></div>
+        <div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem;">${c.incident_details}</div>` : ''}
+        ${c.media_path ? `<a href="/uploads/${c.media_path}" target="_blank" class="btn btn-sm btn-secondary">📎 View Attached Media</a>` : ''}
+      `;
+      document.getElementById('modal-body').innerHTML = html;
+    });
+}
+function closeModal() {
+  document.getElementById('complaintModal').style.display = 'none';
+}
+
+// Chart and Heatmap Initialization
+let analyticsLoaded = false;
+function loadAnalytics() {
+  if (analyticsLoaded) return;
+  analyticsLoaded = true;
+
+  // Load Charts
+  fetch('/api/admin/chart-data')
+    .then(r => r.json())
+    .then(data => {
+      const pCtx = document.getElementById('priorityChart').getContext('2d');
+      new Chart(pCtx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(data.priorities),
+          datasets: [{
+            data: Object.values(data.priorities),
+            backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+            borderWidth: 0
+          }]
+        },
+        options: { plugins: { legend: { labels: { color: '#e2e8f0' } } } }
+      });
+
+      const tCtx = document.getElementById('typeChart').getContext('2d');
+      new Chart(tCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(data.types),
+          datasets: [{
+            label: 'Complaints',
+            data: Object.values(data.types),
+            backgroundColor: '#0ea5e9',
+            borderRadius: 4
+          }]
+        },
+        options: { 
+          plugins: { legend: { display: false } },
+          scales: { 
+            y: { ticks: { color: '#94a3b8', stepSize: 1 } },
+            x: { ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    });
+
+  // Load Heatmap
+  fetch('/api/admin/locations')
+    .then(r => r.json())
+    .then(locs => {
+      // Default center to a roughly central point or map to first loc
+      let center = [11.5, 78.5]; 
+      if(locs.length > 0) center = [locs[0].latitude, locs[0].longitude];
+      
+      const map = L.map('admin-map').setView(center, 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap',
+        className: 'map-tiles'
+      }).addTo(map);
+
+      // Add simple heatmap style filter to map container to match dark mode slightly better
+      document.querySelector('.map-tiles').style.filter = 'brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7)';
+
+      const heatData = locs.map(l => [l.latitude, l.longitude, 1.0]); // Lat, Lon, Intensity
+      L.heatLayer(heatData, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 12,
+        gradient: {0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red'}
+      }).addTo(map);
+      
+      setTimeout(() => map.invalidateSize(), 500); // Fix rendering glitch in hidden tabs
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+</body>
+</html>

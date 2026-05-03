@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin Login | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="{{ url_for('landing') }}" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <a href="{{ url_for('login') }}">User Login</a>
+  </div>
+</nav>
+
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo" style="text-align:center;">🔐</div>
+    <div class="auth-title" style="text-align:center;">Admin Login</div>
+    <div class="auth-subtitle" style="text-align:center;">Restricted access — administrators only</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">⚠️ {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" id="adminForm" novalidate>
+      <div class="form-group">
+        <label class="form-label">Admin Email *</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="admin@safety.com">
+        <span class="form-error">Invalid email address.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••">
+        <span class="form-error">This field is required.</span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="background:linear-gradient(135deg,#dc2626,#991b1b);">
+        🔐 Admin Login
+      </button>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.getElementById('adminForm').addEventListener('submit', function(e) {
+  let valid = true;
+  if (!validateEmail(document.getElementById('email'))) valid = false;
+  if (!validateRequired(document.getElementById('password'))) valid = false;
+  if (!valid) e.preventDefault();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Login | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="{{ url_for('landing') }}" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <a href="{{ url_for('register_select') }}">Register</a>
+    <a href="{{ url_for('admin_login') }}" class="btn btn-secondary btn-sm">🔐 Admin</a>
+  </div>
+</nav>
+
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo" style="text-align:center;">🔑</div>
+    <div class="auth-title" style="text-align:center;">Welcome Back</div>
+    <div class="auth-subtitle" style="text-align:center;">Login to your SafeGuard account</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">⚠️ {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Role Toggle -->
+    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;background:rgba(255,255,255,0.05);border-radius:12px;padding:4px;">
+      <button type="button" id="tab-user" onclick="switchRole('user')"
+        style="flex:1;padding:0.55rem;border:none;border-radius:9px;font-weight:600;font-size:0.88rem;cursor:pointer;background:var(--primary);color:#fff;font-family:inherit;transition:all 0.2s;">
+        👩 User
+      </button>
+      <button type="button" id="tab-staff" onclick="switchRole('staff')"
+        style="flex:1;padding:0.55rem;border:none;border-radius:9px;font-weight:600;font-size:0.88rem;cursor:pointer;background:transparent;color:var(--text-secondary);font-family:inherit;transition:all 0.2s;">
+        👮 Staff
+      </button>
+    </div>
+
+    <form method="POST" id="loginForm" novalidate>
+      <input type="hidden" name="role" id="role-input" value="user">
+      <div class="form-group">
+        <label class="form-label" id="id-label">Email or Username *</label>
+        <input type="text" name="identifier" id="identifier" class="form-control" placeholder="Enter email or username">
+        <span class="form-error">This field is required.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••">
+        <span class="form-error">This field is required.</span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Login →</button>
+    </form>
+
+    <p style="text-align:center;margin-top:1rem;color:var(--text-secondary);font-size:0.85rem;">
+      Don't have an account? <a href="{{ url_for('register_select') }}">Register here</a>
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function switchRole(role) {
+  document.getElementById('role-input').value = role;
+  const uBtn = document.getElementById('tab-user');
+  const sBtn = document.getElementById('tab-staff');
+  const lbl  = document.getElementById('id-label');
+  const inp  = document.getElementById('identifier');
+  if (role === 'user') {
+    uBtn.style.background = 'var(--primary)'; uBtn.style.color = '#fff';
+    sBtn.style.background = 'transparent'; sBtn.style.color = 'var(--text-secondary)';
+    lbl.textContent = 'Email or Username *'; inp.placeholder = 'Enter email or username';
+  } else {
+    sBtn.style.background = 'var(--primary)'; sBtn.style.color = '#fff';
+    uBtn.style.background = 'transparent'; uBtn.style.color = 'var(--text-secondary)';
+    lbl.textContent = 'Email *'; inp.placeholder = 'Enter registered email';
+  }
+}
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  let valid = true;
+  if (!validateRequired(document.getElementById('identifier'))) valid = false;
+  if (!validateRequired(document.getElementById('password'))) valid = false;
+  if (!valid) e.preventDefault();
+});
+</script>
+</body>
+</html>

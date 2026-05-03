@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Staff Registration | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="{{ url_for('landing') }}" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <a href="{{ url_for('register_select') }}">← Back</a>
+    <a href="{{ url_for('login') }}">Login</a>
+  </div>
+</nav>
+
+<div class="auth-wrapper" style="padding:2rem 1rem;">
+  <div class="auth-box" style="max-width:680px;">
+    <div class="auth-logo" style="text-align:center;">👮</div>
+    <div class="auth-title" style="text-align:center;">Staff Registration</div>
+    <div class="auth-subtitle" style="text-align:center;">Submit your application — pending admin approval</div>
+
+    <div class="alert alert-info">ℹ️ After registration, your account will be reviewed by the admin before activation.</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">⚠️ {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" enctype="multipart/form-data" id="staffRegForm" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="full_name" id="full_name" class="form-control" placeholder="Enter full name">
+          <span class="form-error">This field is required.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" name="email" id="email" class="form-control" placeholder="Enter email address">
+          <span class="form-error">Invalid email address.</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone Number * (10 digits)</label>
+          <input type="tel" name="phone" id="phone" class="form-control" placeholder="Enter 10-digit phone number" maxlength="10">
+          <span class="form-error">Phone must be 10 digits.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Age *</label>
+          <input type="number" name="age" id="age" class="form-control" placeholder="Enter age" min="18" max="65">
+          <span class="form-error">This field is required.</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Gender *</label>
+          <select name="gender" id="gender" class="form-control">
+            <option value="">Select Gender</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+          </select>
+          <span class="form-error">This field is required.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Occupation *</label>
+          <input type="text" name="occupation" id="occupation" class="form-control" placeholder="Enter occupation">
+          <span class="form-error">This field is required.</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Address *</label>
+        <input type="text" name="address" id="address" class="form-control" placeholder="Enter full address">
+        <span class="form-error">This field is required.</span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Aadhar Number * (for ID verification)</label>
+          <input type="text" name="aadhar_number" id="aadhar_number" class="form-control" placeholder="Enter Aadhar number" maxlength="14">
+          <span class="form-error">Aadhar number is required.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ID Proof Upload (Image/PDF)</label>
+          <input type="file" name="id_proof" id="id_proof" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+          <span class="form-error"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Experience (optional)</label>
+        <textarea name="experience" class="form-control" placeholder="Describe your relevant experience..." style="min-height:80px;"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="password" name="password" id="password" class="form-control" placeholder="••••••••">
+          <span class="form-error">This field is required.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password *</label>
+          <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="••••••••">
+          <span class="form-error">Passwords do not match.</span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:0.5rem;">
+        📋 Submit Application
+      </button>
+    </form>
+    <p style="text-align:center;margin-top:1rem;color:var(--text-secondary);font-size:0.85rem;">
+      Already registered? <a href="{{ url_for('login') }}">Login</a>
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.getElementById('staffRegForm').addEventListener('submit', function(e) {
+  let valid = true;
+  ['full_name','age','address','occupation','aadhar_number'].forEach(id => {
+    if (!validateRequired(document.getElementById(id))) valid = false;
+  });
+  if (!validateEmail(document.getElementById('email'))) valid = false;
+  if (!validatePhone(document.getElementById('phone'))) valid = false;
+  if (!validateRequired(document.getElementById('gender'))) valid = false;
+  if (!validateRequired(document.getElementById('password'))) valid = false;
+  if (!validatePasswordMatch(document.getElementById('password'), document.getElementById('confirm_password'))) valid = false;
+  if (!valid) e.preventDefault();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Track Complaint | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="{{ url_for('landing') }}" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    {% if session.get('user_id') %}
+      <a href="{{ url_for('dashboard_user') }}">← Dashboard</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Login</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="auth-wrapper" style="align-items:flex-start;padding-top:3rem;">
+  <div style="width:100%;max-width:640px;">
+    <div class="page-header" style="text-align:center;">
+      <h1>🔍 Track Your Complaint</h1>
+      <p>Enter your unique Track ID to view the current status.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="card">
+      <form method="POST" id="trackForm" novalidate>
+        <div class="form-group">
+          <label class="form-label">Track ID *</label>
+          <input type="text" name="track_id" id="track_id" class="form-control"
+            placeholder="e.g. TRKAB12CD34" style="font-family:monospace;letter-spacing:0.05em;"
+            value="{{ request.form.get('track_id', '') }}">
+          <span class="form-error">Please enter a Track ID.</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">🔍 Search</button>
+      </form>
+    </div>
+
+    {% if complaint %}
+    <div class="card fade-in" style="margin-top:1.5rem;border-color:rgba(168,85,247,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div>
+          <code style="color:var(--primary);font-size:1rem;font-weight:700;">{{ complaint.track_id }}</code>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <span class="badge badge-{{ complaint.priority|lower }}">{{ complaint.priority }}</span>
+          {% if complaint.status == 'Pending' %}<span class="badge badge-pending">Pending</span>
+          {% elif complaint.status == 'Assigned' %}<span class="badge badge-assigned">Assigned</span>
+          {% elif complaint.status in ['Accepted','In Progress'] %}<span class="badge badge-progress">{{ complaint.status }}</span>
+          {% elif complaint.status == 'Completed' %}<span class="badge badge-completed">✅ Completed</span>
+          {% else %}<span class="badge">{{ complaint.status }}</span>{% endif %}
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.2rem;">Type</div>
+          <div style="font-weight:600;">{{ complaint.type or '—' }}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.2rem;">Date Filed</div>
+          <div style="font-weight:600;">{{ complaint.created_at[:10] }}</div>
+        </div>
+        {% if staff_name %}
+        <div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.2rem;">Assigned Officer</div>
+          <div style="font-weight:600;color:var(--accent);">👮 {{ staff_name }}</div>
+        </div>
+        {% endif %}
+        {% if complaint.latitude %}
+        <div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.2rem;">Location</div>
+          <div style="font-weight:600;font-size:0.82rem;">📍 {{ complaint.latitude }}, {{ complaint.longitude }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if complaint.description %}
+      <div style="margin-top:1rem;padding:0.9rem;background:rgba(255,255,255,0.04);border-radius:10px;">
+        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.3rem;">Description</div>
+        <div style="font-size:0.88rem;line-height:1.6;">{{ complaint.description }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Progress Timeline -->
+      <div style="margin-top:1.5rem;">
+        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.75rem;">PROGRESS</div>
+        {% set steps = [('Pending','Filed'), ('Assigned','Assigned'), ('In Progress','In Progress'), ('Completed','Resolved')] %}
+        {% set status_order = {'Pending':0,'Assigned':1,'Accepted':1,'In Progress':2,'Completed':3} %}
+        {% set current_idx = status_order.get(complaint.status, 0) %}
+        <div style="display:flex;align-items:center;gap:0;">
+          {% for step in steps %}
+            {% set i = loop.index0 %}
+            {% set st = step[0] %}
+            {% set label = step[1] %}
+            <div style="text-align:center;flex:1;">
+              <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;
+                {{ 'background:var(--primary);color:#fff;' if i <= current_idx else 'background:rgba(255,255,255,0.1);color:var(--text-secondary);' }}">
+                {{ i + 1 }}
+              </div>
+              <div style="font-size:0.7rem;color:{{ 'var(--text-primary)' if i <= current_idx else 'var(--text-secondary)' }};">{{ label }}</div>
+            </div>
+            {% if not loop.last %}
+            <div style="flex:1;height:2px;background:{{ 'var(--primary)' if i < current_idx else 'rgba(255,255,255,0.1)' }};margin-bottom:1.2rem;"></div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.getElementById('trackForm').addEventListener('submit', function(e) {
+  if (!validateRequired(document.getElementById('track_id'))) e.preventDefault();
+});
+</script>
+</body>
+</html>

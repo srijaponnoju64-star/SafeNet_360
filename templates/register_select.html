@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Register | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="{{ url_for('landing') }}" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <a href="{{ url_for('login') }}">Already have an account? Login</a>
+  </div>
+</nav>
+<div class="auth-wrapper">
+  <div class="auth-box" style="max-width:560px;">
+    <div class="auth-logo" style="text-align:center;">🛡️</div>
+    <div class="auth-title" style="text-align:center;">Create an Account</div>
+    <div class="auth-subtitle" style="text-align:center;">Choose how you want to register</div>
+    <div class="role-cards">
+      <a href="{{ url_for('register_user') }}" class="role-card">
+        <div class="icon">👩</div>
+        <h2>Register as User</h2>
+        <p>Report incidents, send SOS alerts, and track your complaints.</p>
+      </a>
+      <a href="{{ url_for('register_staff') }}" class="role-card">
+        <div class="icon">👮</div>
+        <h2>Register as Staff</h2>
+        <p>Join as a verified officer to respond to assigned cases.</p>
+      </a>
+    </div>
+    <p style="text-align:center;margin-top:1.5rem;color:var(--text-secondary);font-size:0.85rem;">
+      Already registered? <a href="{{ url_for('login') }}">Login here</a>
+    </p>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

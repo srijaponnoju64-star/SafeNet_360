@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>User Dashboard | SafeGuard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+</head>
+<body>
+<nav class="navbar">
+  <a href="#" class="navbar-brand">🛡️ SafeGuard</a>
+  <div class="navbar-links">
+    <span style="color:var(--text-secondary);font-size:0.88rem;">👋 {{ user_name }}</span>
+    <a href="{{ url_for('track_complaint') }}" class="btn btn-secondary btn-sm">🔍 Track</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#fca5a5;">Logout</a>
+  </div>
+</nav>
+
+<div class="page-container">
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="page-header">
+    <h1>Welcome, {{ user_name }} 👋</h1>
+    <p>Your personal safety dashboard — stay safe, stay connected.</p>
+  </div>
+
+  <!-- Action Cards -->
+  <div class="action-grid">
+    <!-- SOS -->
+    <div class="card" style="text-align:center;border-color:rgba(239,68,68,0.3);">
+      <div style="font-size:3rem;margin-bottom:0.75rem;">🚨</div>
+      <h3 style="font-size:1.1rem;margin-bottom:0.4rem;">Emergency SOS</h3>
+      <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:1rem;">
+        Send an immediate emergency alert with your location to authorities.
+      </p>
+      <button id="sos-btn" class="btn btn-sos btn-block" onclick="triggerSOS()">
+        🚨 SEND SOS ALERT
+      </button>
+      <div id="sos-result" style="margin-top:0.75rem;"></div>
+    </div>
+
+    <!-- Share Location -->
+    <div class="card" style="text-align:center;border-color:rgba(6,182,212,0.3);">
+      <div style="font-size:3rem;margin-bottom:0.75rem;">📍</div>
+      <h3 style="font-size:1.1rem;margin-bottom:0.4rem;">Share Live Location</h3>
+      <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:1rem;">
+        Share your current location with safety authorities instantly.
+      </p>
+      <button id="loc-btn" class="btn btn-primary btn-block" style="background:linear-gradient(135deg,#06b6d4,#0284c7);" onclick="shareLocation()">
+        📡 Share My Location
+      </button>
+      <div id="loc-result" style="margin-top:0.75rem;"></div>
+      <div id="user-map" style="height:180px;border-radius:10px;margin-top:1rem;display:none;z-index:1;border:1px solid var(--border);"></div>
+    </div>
+
+    <!-- Report Incident -->
+    <div class="card" style="text-align:center;border-color:rgba(168,85,247,0.3);">
+      <div style="font-size:3rem;margin-bottom:0.75rem;">📝</div>
+      <h3 style="font-size:1.1rem;margin-bottom:0.4rem;">Report Incident</h3>
+      <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:1rem;">
+        File a detailed complaint with description, evidence, and witnesses.
+      </p>
+      <a href="{{ url_for('report_incident') }}" class="btn btn-primary btn-block">
+        📝 Report an Incident
+      </a>
+    </div>
+
+    <!-- Track Complaint -->
+    <div class="card" style="text-align:center;border-color:rgba(16,185,129,0.3);">
+      <div style="font-size:3rem;margin-bottom:0.75rem;">🔍</div>
+      <h3 style="font-size:1.1rem;margin-bottom:0.4rem;">Track Complaint</h3>
+      <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:1rem;">
+        Enter your Track ID to check the current status of your complaint.
+      </p>
+      <a href="{{ url_for('track_complaint') }}" class="btn btn-success btn-block">
+        🔍 Track My Complaint
+      </a>
+    </div>
+  </div>
+
+  <!-- Recent Complaints -->
+  <div class="section-title">📋 My Recent Complaints</div>
+  {% if complaints %}
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Track ID</th>
+            <th>Type</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in complaints %}
+          <tr>
+            <td><code style="color:var(--primary);font-size:0.82rem;">{{ c.track_id }}</code>
+              {% if c.is_sos %}<span class="badge badge-sos" style="margin-left:0.4rem;">SOS</span>{% endif %}
+            </td>
+            <td>{{ c.type or '—' }}</td>
+            <td>
+              <span class="badge badge-{{ c.priority|lower }}">{{ c.priority }}</span>
+              {% if c.is_suspicious %}<span class="badge badge-suspicious" style="margin-left:4px;">⚠️ Suspicious</span>{% endif %}
+            </td>
+            <td>
+              {% if c.status == 'Pending' %}<span class="badge badge-pending">Pending</span>
+              {% elif c.status == 'Assigned' %}<span class="badge badge-assigned">Assigned</span>
+              {% elif c.status in ['Accepted','In Progress'] %}<span class="badge badge-progress">{{ c.status }}</span>
+              {% elif c.status == 'Completed' %}<span class="badge badge-completed">Completed</span>
+              {% else %}<span class="badge">{{ c.status }}</span>{% endif %}
+            </td>
+            <td style="color:var(--text-secondary);font-size:0.82rem;">{{ c.created_at[:10] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text-secondary);">
+      <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
+      <p>No complaints filed yet. You can report an incident using the button above.</p>
+    </div>
+  {% endif %}
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+// Map Initialization
+let map, marker;
+function initMap(lat, lon) {
+  const mapEl = document.getElementById('user-map');
+  mapEl.style.display = 'block';
+  if (!map) {
+    map = L.map('user-map').setView([lat, lon], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    marker = L.marker([lat, lon]).addTo(map);
+  } else {
+    map.setView([lat, lon], 13);
+    marker.setLatLng([lat, lon]);
+  }
+}
+
+// Override shareLocation from main.js to show map
+window.shareLocation = function() {
+  const btn = document.getElementById('loc-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '📡 Sharing...'; }
+  fetch('/share-location', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(r => r.json())
+    .then(data => {
+      showToast(data.message, 'success');
+      document.getElementById('loc-result').innerHTML = 
+        `<div class="alert alert-success" style="font-size:0.8rem;padding:0.5rem;">📍 Location: ${data.lat}, ${data.lon}</div>`;
+      if (btn) { btn.textContent = '✅ Location Shared'; btn.disabled = false; }
+      initMap(data.lat, data.lon);
+    })
+    .catch(() => { showToast('Failed to share location.', 'danger'); if (btn) btn.disabled = false; });
+};
+
+// Polling status
+let currentStatuses = {};
+{% for c in complaints %}
+currentStatuses[{{ c.id }}] = "{{ c.status }}";
+{% endfor %}
+
+setInterval(() => {
+  fetch('/api/complaints/status')
+    .then(r => r.json())
+    .then(data => {
+      let changed = false;
+      data.forEach(c => {
+        if (currentStatuses[c.id] && currentStatuses[c.id] !== c.status) {
+          showToast(`Complaint ${c.track_id} status updated to: ${c.status}`, 'info');
+          currentStatuses[c.id] = c.status;
+          changed = true;
+        }
+      });
+      if (changed) {
+        setTimeout(() => location.reload(), 2500); // Reload to reflect changes visually
+      }
+    });
+}, 30000); // 30 seconds
+</script>
+</body>
+</html>
