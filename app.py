@@ -730,4 +730,4 @@ if __name__ == "__main__":
     print("  User   -> demo@user.com      / User@123")
     print("  Staff  -> staff@safety.com   / Staff@123")
     print("="*50 + "\n")
-    app.run(debug=True, port=5000, use_reloader=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
